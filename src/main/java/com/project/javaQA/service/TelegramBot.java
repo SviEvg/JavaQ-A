@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.project.javaQA.config.BotConfig;
 import com.project.javaQA.model.Questions;
 import com.project.javaQA.model.QuestionsRepository;
+import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -44,7 +45,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         catch (TelegramApiException e) {
             log.error("Error setting bot's command list: " + e.getMessage());
         }
-
 
     }
 
@@ -94,7 +94,8 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
     private void startCommandReceived(long chatId, String name) {
 
-        String answer = "Здраствуйте,  " + name + "! Выберите раздел! ";
+        String answer = EmojiParser.parseToUnicode("Здраствуйте,  " + name + "! Выберите раздел!" + ":point_down:");
+
         log.info("Replied to user " + name);
         sendMessage(chatId, answer);
     }
