@@ -15,6 +15,8 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.File;
@@ -27,7 +29,7 @@ import java.util.List;
 public class TelegramBot extends TelegramLongPollingBot {
 
   final   BotConfig config;
-  static final String HELP_TEXT = "JavaQ&A - бот, который генерирует вопросы для интервью на позицию Java Developer.\n" +
+  static final String HELP_TEXT = "JavaQ&A - бот, который содержит вопросы для интервью на позицию Java Developer.\n" +
           "Для работы с ботом достаточно выбрать интересующую тему(раздел)\n" +
           "JavaQ&A выведит на экран наиболее популярные вопросы с ответами.";
  @Autowired
@@ -83,6 +85,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                case "/help":
                        sendMessage(chatId, HELP_TEXT);
                        break;
+                case "/section":
+                       section(chatId);
+                       break;
                 default:
 
                         sendMessage(chatId, "Извините! Данная команда не поддерживается!");
@@ -92,9 +97,53 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
     }
+
+    private void section(long chatId) {
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText("Выберите нужный раздел!" +  EmojiParser.parseToUnicode(":point_down:"));
+
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+
+        InlineKeyboardButton inlineOOPButton = new InlineKeyboardButton();
+        inlineOOPButton.setText("ООП");
+        inlineOOPButton.setCallbackData("OOP_BUTTON");
+        List<InlineKeyboardButton> keyboardButtonsRow1 = new ArrayList<>();
+        keyboardButtonsRow1.add(inlineOOPButton);
+
+        InlineKeyboardButton inlineJavaCoreButton = new InlineKeyboardButton();
+        inlineJavaCoreButton.setText("JavaCore");
+        inlineJavaCoreButton.setCallbackData("JAVA_CORE_BUTTON");
+        List<InlineKeyboardButton> keyboardButtonsRow2 = new ArrayList<>();
+        keyboardButtonsRow2.add(inlineJavaCoreButton);
+
+        InlineKeyboardButton inlineJavaCollectionsButton = new InlineKeyboardButton();
+        inlineJavaCollectionsButton.setText("JavaCollections");
+        inlineJavaCollectionsButton.setCallbackData("JAVA_COLLECTIONS_BUTTON");
+        List<InlineKeyboardButton> keyboardButtonsRow3 = new ArrayList<>();
+        keyboardButtonsRow3.add(inlineJavaCollectionsButton);
+
+        List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
+        rowList.add(keyboardButtonsRow1);
+        rowList.add(keyboardButtonsRow2);
+        rowList.add(keyboardButtonsRow3);
+
+        keyboardMarkup.setKeyboard(rowList);
+        message.setReplyMarkup(keyboardMarkup);
+
+        try{
+            execute(message);
+        }
+        catch (TelegramApiException e) {
+            log.error("Error occurred: " + e.getMessage());
+        }
+
+    }
+
     private void startCommandReceived(long chatId, String name) {
 
-        String answer = EmojiParser.parseToUnicode("Здраствуйте,  " + name + "! Выберите раздел!" + ":point_down:");
+        String answer = EmojiParser.parseToUnicode("Здраствуйте,  " + name + "!"+":slight_smile:");
 
         log.info("Replied to user " + name);
         sendMessage(chatId, answer);
