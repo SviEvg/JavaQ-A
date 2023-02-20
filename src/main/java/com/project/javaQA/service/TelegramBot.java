@@ -3,15 +3,19 @@ package com.project.javaQA.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.project.javaQA.config.BotConfig;
-import com.project.javaQA.model.Questions;
-import com.project.javaQA.model.QuestionsRepository;
+import com.project.javaQA.model.OOP;
+import com.project.javaQA.model.OOPRepository;
+
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.ActionType;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
+import org.telegram.telegrambots.meta.api.methods.send.SendChatAction;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
@@ -29,11 +33,13 @@ import java.util.List;
 public class TelegramBot extends TelegramLongPollingBot {
 
   final   BotConfig config;
-  static final String HELP_TEXT = "JavaQ&A - бот, который содержит вопросы для интервью на позицию Java Developer.\n" +
+  static final String HELP_TEXT = "JavaQ&A - бот, который поможет Вам подготовиться к интервью на позицию Java Developer.\n" +
           "Для работы с ботом достаточно выбрать интересующую тему(раздел)\n" +
           "JavaQ&A выведит на экран наиболее популярные вопросы с ответами.";
  @Autowired
-  private QuestionsRepository questionsRepository;
+  private OOPRepository oopRepository;
+
+
     public TelegramBot(BotConfig config) {
 
         this.config = config;
@@ -41,6 +47,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         listOfCommands.add(new BotCommand("/start", "приветствие"));
         listOfCommands.add(new BotCommand("/section", "выбор раздела"));
         listOfCommands.add(new BotCommand("/help", "информация о JavaQ&A"));
+
         try{
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
         }
@@ -60,8 +67,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         return config.getBotToken();
     }
 
+
+
     @Override
     public void onUpdateReceived(Update update) {
+
 
         if(update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
@@ -70,12 +80,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "/start":
 
                         startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
+                       section(chatId);
+
                     try {
                         ObjectMapper objectMapper = new ObjectMapper();
                         TypeFactory typeFactory = objectMapper.getTypeFactory();
-                        List<Questions> questionsList = objectMapper.readValue(new File("db/questions.json"),
-                                typeFactory.constructCollectionType(List.class, Questions.class));
-                        questionsRepository.saveAll(questionsList);
+                        List<OOP> questionsList = objectMapper.readValue(new File("db/oop.json"),
+                                typeFactory.constructCollectionType(List.class, OOP.class));
+                        oopRepository.saveAll(questionsList);
                     }
                     catch (Exception e) {
                         log.error(Arrays.toString(e.getStackTrace()));
@@ -88,15 +100,41 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "/section":
                        section(chatId);
                        break;
+
+
                 default:
 
                         sendMessage(chatId, "Извините! Данная команда не поддерживается!");
 
-
             }
+        } else if (update.hasCallbackQuery()) {
+            CallbackQuery callbackQuery = update.getCallbackQuery();
+            String data = callbackQuery.getData();
+            String chat_id = callbackQuery.getMessage().getChat().getId().toString();
+
+            SendChatAction sendChatAction = new SendChatAction();
+            if(data.equals("OOP_BUTTON")) {
+                sendChatAction.setChatId(chat_id);
+                SendMessage sendMessage = new SendMessage();
+                sendMessage(Long.parseLong(chat_id), String.valueOf(oopRepository.findAll())
+                        .replace(",", "")
+                        .replace("[", "")
+                        .replace("]", "")
+                        .trim()        );
+                try {
+                    sendChatAction.setAction(ActionType.TYPING);
+                    execute(sendChatAction);
+                    execute(sendMessage);
+                }catch (TelegramApiException e) {
+                    log.error("Кнопка не работает: " + e.getMessage());
+                }
+            }
+
         }
 
     }
+
+
 
     private void section(long chatId) {
 
@@ -143,7 +181,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void startCommandReceived(long chatId, String name) {
 
-        String answer = EmojiParser.parseToUnicode("Здраствуйте,  " + name + "!"+":slight_smile:");
+        String answer = EmojiParser.parseToUnicode("Здраствуйте,  " + name + "!"+":slight_smile:" + "\n"
+        + "Для работы с ботом достаточно выбрать интересующую тему(раздел)!\n");
 
         log.info("Replied to user " + name);
         sendMessage(chatId, answer);
